@@ -99,9 +99,29 @@ open class InfiniteLayout: UICollectionViewFlowLayout {
             }
         }
         elements.append(contentsOf: self.elements(in: rect, page: page))
-        return elements
+
+        return elements.map({ self.transformLayoutAttributes($0) })
     }
-    
+
+    fileprivate func transformLayoutAttributes(_ attributes: UICollectionViewLayoutAttributes) -> UICollectionViewLayoutAttributes {
+        guard let collectionView = self.collectionView else { return attributes }
+        let isHorizontal = (self.scrollDirection == .horizontal)
+
+        let collectionCenter = isHorizontal ? collectionView.frame.size.width/2 : collectionView.frame.size.height/2
+        let offset = isHorizontal ? collectionView.contentOffset.x : collectionView.contentOffset.y
+        let normalizedCenter = (isHorizontal ? attributes.center.x : attributes.center.y) - offset
+
+        let maxDistance = (isHorizontal ? self.itemSize.width : self.itemSize.height) + self.minimumLineSpacing
+        let distance = min(abs(collectionCenter - normalizedCenter), maxDistance)
+        let ratio = (maxDistance - distance)/maxDistance
+
+        let scale = ratio * (1 - 89/111) + 89/111
+        attributes.transform3D = CATransform3DScale(CATransform3DIdentity, scale, scale, 1)
+
+        return attributes
+    }
+
+
     private func page(for point: CGPoint) -> CGPoint {
         let xPage: CGFloat = floor(point.x / contentSize.width)
         let yPage: CGFloat = floor(point.y / contentSize.height)
